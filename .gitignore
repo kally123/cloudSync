@@ -1,0 +1,32 @@
+# Compiled class files
+*.class
+
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Storage
+storage/
+test-storage/
+
+# Database
+data/
+*.db
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
