@@ -15,38 +15,103 @@ A full-featured cloud storage solution built with Java and Spring Boot. Host you
 
 ## Tech Stack
 
-- **Backend**: Java 17, Spring Boot 3.2
+- **Backend**: Java 21, Spring Boot 3.2
 - **Database**: H2 (development), PostgreSQL (production)
 - **Security**: Spring Security, JWT
-- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
 - **API Docs**: SpringDoc OpenAPI
 
 ## Getting Started
 
-### Prerequisites
+You can run CloudSync either with Docker (recommended) or manually.
 
-- Java 17 or higher
-- Maven 3.6+
+### Option 1: Docker (Recommended)
 
-### Installation
+#### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### Installation
 
 1. **Clone the repository**
    ```bash
+   git clone https://github.com/kally123/cloudSync.git
    cd cloudSync
    ```
 
-2. **Build the project**
+2. **Configure environment variables (optional)**
    ```bash
-   mvn clean install
+   cp .env.example .env
+   # Edit .env to customize settings (JWT secret, database credentials, etc.)
    ```
 
-3. **Run the application**
+3. **Start all services with Docker Compose**
    ```bash
+   docker-compose up -d
+   ```
+
+   This will start:
+   - PostgreSQL database on port 5432
+   - Backend API on port 8080
+   - Frontend web app on port 3000
+
+4. **Access the application**
+   - Web UI: http://localhost:3000
+   - API Docs: http://localhost:8080/swagger-ui.html
+   - Backend API: http://localhost:8080
+
+5. **View logs**
+   ```bash
+   # View all logs
+   docker-compose logs -f
+   
+   # View specific service logs
+   docker-compose logs -f backend
+   docker-compose logs -f frontend
+   ```
+
+6. **Stop the application**
+   ```bash
+   docker-compose down
+   
+   # Stop and remove volumes (deletes all data)
+   docker-compose down -v
+   ```
+
+### Option 2: Manual Installation
+
+#### Prerequisites
+
+- Java 21 or higher
+- Maven 3.6+
+- Node.js 18+ and npm
+
+#### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/kally123/cloudSync.git
+   cd cloudSync
+   ```
+
+2. **Build and run the backend**
+   ```bash
+   cd backend
+   mvn clean install
    mvn spring-boot:run
    ```
 
+3. **Build and run the frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
 4. **Access the application**
-   - Web UI: http://localhost:8080
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8080
    - API Docs: http://localhost:8080/swagger-ui.html
    - H2 Console: http://localhost:8080/h2-console
 
@@ -139,6 +204,51 @@ curl -X GET http://localhost:8080/api/files/1/download \
 ```
 
 ## Production Deployment
+
+### Docker Deployment (Recommended)
+
+1. **Create a production environment file**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit the .env file with production values**
+   ```env
+   JWT_SECRET=your-super-secret-key-change-this-in-production
+   POSTGRES_PASSWORD=your-strong-database-password
+   ```
+
+3. **Start services in production mode**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Configure reverse proxy (optional)**
+   
+   For production, use Nginx or Traefik as a reverse proxy:
+   
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+       
+       location /api {
+           proxy_pass http://localhost:8080;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+
+5. **Enable HTTPS** - Use Let's Encrypt or your SSL certificate provider
+
+### Manual Production Deployment
 
 1. **Use PostgreSQL**
    ```yaml

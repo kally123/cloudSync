@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cloudsync-postgres
+    environment:
+      POSTGRES_DB: cloudsync
+      POSTGRES_USER: cloudsync
+      POSTGRES_PASSWORD: cloudsync_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cloudsync-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cloudsync"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudsync-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloudsync
+      SPRING_DATASOURCE_USERNAME: cloudsync
+      SPRING_DATASOURCE_PASSWORD: cloudsync_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      CLOUDSYNC_STORAGE_PATH: /app/storage
+      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:-mySecretKeyForCloudSyncApplicationThatShouldBeChangedInProduction123456}
+    volumes:
+      - backend_storage:/app/storage
+      - backend_data:/app/data
+    ports:
+      - "8080:8080"
+    networks:
+      - cloudsync-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/api-docs || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudsync-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8080
+    ports:
+      - "3000:3000"
+    networks:
+      - cloudsync-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  cloudsync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backend_storage:
+  backend_data:
