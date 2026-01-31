@@ -1,5 +1,19 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
     "java.debug.settings.onBuildFailureProceed": true,
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:\\SOFTWARES\\azul-21",
+            "default": true
+        }
+    ],
+    "java.jdt.ls.java.home": "C:\\SOFTWARES\\azul-21",
+    "maven.terminal.customEnv": [
+        {
+            "environmentVariable": "JAVA_HOME",
+            "value": "C:\\SOFTWARES\\azul-21"
+        }
+    ]
 }
