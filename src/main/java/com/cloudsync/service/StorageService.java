@@ -20,7 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -50,7 +52,7 @@ public class StorageService {
     @PostConstruct
     public void init() {
         try {
-            this.rootLocation = Paths.get(storageConfig.getPath()).toAbsolutePath().normalize();
+            this.rootLocation = Path.of(storageConfig.getPath()).toAbsolutePath().normalize();
             Files.createDirectories(rootLocation);
             log.info("Storage initialized at: {}", rootLocation);
         } catch (IOException e) {
@@ -99,7 +101,7 @@ public class StorageService {
      */
     public Resource loadAsResource(StoredFile file) {
         try {
-            Path filePath = Paths.get(file.getStoragePath());
+            Path filePath = Path.of(file.getStoragePath());
             Resource resource = new UrlResource(filePath.toUri());
             
             if (resource.exists() && resource.isReadable()) {
@@ -118,7 +120,7 @@ public class StorageService {
      */
     public void delete(StoredFile file) {
         try {
-            Path filePath = Paths.get(file.getStoragePath());
+            Path filePath = Path.of(file.getStoragePath());
             Files.deleteIfExists(filePath);
             log.debug("File deleted from storage: {}", filePath);
         } catch (IOException e) {
@@ -223,8 +225,8 @@ public class StorageService {
 
     private static String formatBytes(long bytes) {
         if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return String.format("%.2f KB", bytes / 1024.0);
-        if (bytes < 1024 * 1024 * 1024) return String.format("%.2f MB", bytes / (1024.0 * 1024));
-        return String.format("%.2f GB", bytes / (1024.0 * 1024 * 1024));
+        if (bytes < 1024 * 1024) return "%.2f KB".formatted(bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) return "%.2f MB".formatted(bytes / (1024.0 * 1024));
+        return "%.2f GB".formatted(bytes / (1024.0 * 1024 * 1024));
     }
 }

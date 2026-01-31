@@ -49,8 +49,8 @@ public record FileDto(
      */
     public String formattedSize() {
         if (size < 1024) return size + " B";
-        if (size < 1024 * 1024) return String.format("%.2f KB", size / 1024.0);
-        if (size < 1024 * 1024 * 1024) return String.format("%.2f MB", size / (1024.0 * 1024));
-        return String.format("%.2f GB", size / (1024.0 * 1024 * 1024));
+        if (size < 1024 * 1024) return "%.2f KB".formatted(size / 1024.0);
+        if (size < 1024 * 1024 * 1024) return "%.2f MB".formatted(size / (1024.0 * 1024));
+        return "%.2f GB".formatted(size / (1024.0 * 1024 * 1024));
     }
 }
