@@ -1,87 +1,53 @@
 package com.cloudsync.dto;
 
-public class StorageStats {
-
-    private long usedStorage;
-    private long maxStorage;
-    private long availableStorage;
-    private int totalFiles;
-    private int totalFolders;
-    private double usedPercentage;
-
-    public StorageStats() {}
-
+/**
+ * Immutable DTO representing user storage statistics.
+ * Provides computed properties for available storage and usage percentage.
+ */
+public record StorageStats(
+        long usedStorage,
+        long maxStorage,
+        long availableStorage,
+        int totalFiles,
+        int totalFolders,
+        double usedPercentage
+) {
+    /**
+     * Creates StorageStats with computed fields.
+     */
     public StorageStats(long usedStorage, long maxStorage, int totalFiles, int totalFolders) {
-        this.usedStorage = usedStorage;
-        this.maxStorage = maxStorage;
-        this.availableStorage = maxStorage - usedStorage;
-        this.totalFiles = totalFiles;
-        this.totalFolders = totalFolders;
-        this.usedPercentage = maxStorage > 0 ? (usedStorage * 100.0 / maxStorage) : 0;
+        this(
+                usedStorage,
+                maxStorage,
+                maxStorage - usedStorage,
+                totalFiles,
+                totalFolders,
+                maxStorage > 0 ? (usedStorage * 100.0 / maxStorage) : 0
+        );
     }
 
-    // Getters and Setters
-    public long getUsedStorage() {
-        return usedStorage;
-    }
-
-    public void setUsedStorage(long usedStorage) {
-        this.usedStorage = usedStorage;
-    }
-
-    public long getMaxStorage() {
-        return maxStorage;
-    }
-
-    public void setMaxStorage(long maxStorage) {
-        this.maxStorage = maxStorage;
-    }
-
-    public long getAvailableStorage() {
-        return availableStorage;
-    }
-
-    public void setAvailableStorage(long availableStorage) {
-        this.availableStorage = availableStorage;
-    }
-
-    public int getTotalFiles() {
-        return totalFiles;
-    }
-
-    public void setTotalFiles(int totalFiles) {
-        this.totalFiles = totalFiles;
-    }
-
-    public int getTotalFolders() {
-        return totalFolders;
-    }
-
-    public void setTotalFolders(int totalFolders) {
-        this.totalFolders = totalFolders;
-    }
-
-    public double getUsedPercentage() {
-        return usedPercentage;
-    }
-
-    public void setUsedPercentage(double usedPercentage) {
-        this.usedPercentage = usedPercentage;
-    }
-
-    public String getFormattedUsedStorage() {
+    /**
+     * Returns human-readable used storage format.
+     */
+    public String formattedUsedStorage() {
         return formatBytes(usedStorage);
     }
 
-    public String getFormattedMaxStorage() {
+    /**
+     * Returns human-readable max storage format.
+     */
+    public String formattedMaxStorage() {
         return formatBytes(maxStorage);
     }
 
-    public String getFormattedAvailableStorage() {
+    /**
+     * Returns human-readable available storage format.
+     */
+    public String formattedAvailableStorage() {
         return formatBytes(availableStorage);
     }
 
-    private String formatBytes(long bytes) {
+    private static String formatBytes(long bytes) {
         if (bytes < 1024) return bytes + " B";
         if (bytes < 1024 * 1024) return String.format("%.2f KB", bytes / 1024.0);
         if (bytes < 1024 * 1024 * 1024) return String.format("%.2f MB", bytes / (1024.0 * 1024));

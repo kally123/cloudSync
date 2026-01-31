@@ -2,140 +2,79 @@ package com.cloudsync.dto;
 
 import com.cloudsync.entity.Folder;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class FolderDto {
+/**
+ * Immutable DTO representing folder information for API responses.
+ * Uses Java record for performance and immutability as per coding guidelines.
+ */
+public record FolderDto(
+        Long id,
+        String name,
+        String path,
+        Long parentId,
+        String parentName,
+        int fileCount,
+        int subfolderCount,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt,
+        List<FolderDto> subfolders,
+        List<FileDto> files
+) {
+    /**
+     * Canonical constructor ensuring immutable collections.
+     */
+    public FolderDto {
+        subfolders = subfolders != null ? List.copyOf(subfolders) : Collections.emptyList();
+        files = files != null ? List.copyOf(files) : Collections.emptyList();
+    }
 
-    private Long id;
-    private String name;
-    private String path;
-    private Long parentId;
-    private String parentName;
-    private int fileCount;
-    private int subfolderCount;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-    private List<FolderDto> subfolders;
-    private List<FileDto> files;
-
-    public FolderDto() {}
-
+    /**
+     * Creates a FolderDto from a Folder entity without loading contents.
+     * Use for list responses to avoid unnecessary data transfer.
+     */
     public static FolderDto fromEntity(Folder folder) {
-        FolderDto dto = new FolderDto();
-        dto.setId(folder.getId());
-        dto.setName(folder.getName());
-        dto.setPath(folder.getPath());
-        dto.setParentId(folder.getParent() != null ? folder.getParent().getId() : null);
-        dto.setParentName(folder.getParent() != null ? folder.getParent().getName() : null);
-        dto.setFileCount(folder.getFiles() != null ? folder.getFiles().size() : 0);
-        dto.setSubfolderCount(folder.getSubfolders() != null ? folder.getSubfolders().size() : 0);
-        dto.setCreatedAt(folder.getCreatedAt());
-        dto.setUpdatedAt(folder.getUpdatedAt());
-        return dto;
+        return new FolderDto(
+                folder.getId(),
+                folder.getName(),
+                folder.getPath(),
+                folder.getParent() != null ? folder.getParent().getId() : null,
+                folder.getParent() != null ? folder.getParent().getName() : null,
+                folder.getFiles() != null ? folder.getFiles().size() : 0,
+                folder.getSubfolders() != null ? folder.getSubfolders().size() : 0,
+                folder.getCreatedAt(),
+                folder.getUpdatedAt(),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
     }
 
+    /**
+     * Creates a FolderDto from a Folder entity including contents.
+     * Use for detailed folder view with subfolders and files.
+     */
     public static FolderDto fromEntityWithContents(Folder folder) {
-        FolderDto dto = fromEntity(folder);
-        if (folder.getSubfolders() != null) {
-            dto.setSubfolders(folder.getSubfolders().stream()
-                    .map(FolderDto::fromEntity)
-                    .collect(Collectors.toList()));
-        }
-        if (folder.getFiles() != null) {
-            dto.setFiles(folder.getFiles().stream()
-                    .map(FileDto::fromEntity)
-                    .collect(Collectors.toList()));
-        }
-        return dto;
-    }
+        List<FolderDto> subfolderDtos = folder.getSubfolders() != null
+                ? folder.getSubfolders().stream().map(FolderDto::fromEntity).toList()
+                : Collections.emptyList();
+        
+        List<FileDto> fileDtos = folder.getFiles() != null
+                ? folder.getFiles().stream().map(FileDto::fromEntity).toList()
+                : Collections.emptyList();
 
-    // Getters and Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public Long getParentId() {
-        return parentId;
-    }
-
-    public void setParentId(Long parentId) {
-        this.parentId = parentId;
-    }
-
-    public String getParentName() {
-        return parentName;
-    }
-
-    public void setParentName(String parentName) {
-        this.parentName = parentName;
-    }
-
-    public int getFileCount() {
-        return fileCount;
-    }
-
-    public void setFileCount(int fileCount) {
-        this.fileCount = fileCount;
-    }
-
-    public int getSubfolderCount() {
-        return subfolderCount;
-    }
-
-    public void setSubfolderCount(int subfolderCount) {
-        this.subfolderCount = subfolderCount;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<FolderDto> getSubfolders() {
-        return subfolders;
-    }
-
-    public void setSubfolders(List<FolderDto> subfolders) {
-        this.subfolders = subfolders;
-    }
-
-    public List<FileDto> getFiles() {
-        return files;
-    }
-
-    public void setFiles(List<FileDto> files) {
-        this.files = files;
+        return new FolderDto(
+                folder.getId(),
+                folder.getName(),
+                folder.getPath(),
+                folder.getParent() != null ? folder.getParent().getId() : null,
+                folder.getParent() != null ? folder.getParent().getName() : null,
+                fileDtos.size(),
+                subfolderDtos.size(),
+                folder.getCreatedAt(),
+                folder.getUpdatedAt(),
+                subfolderDtos,
+                fileDtos
+        );
     }
 }

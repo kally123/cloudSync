@@ -37,9 +37,9 @@ class AuthServiceTest {
         var response = authService.register(request);
 
         assertNotNull(response);
-        assertNotNull(response.getToken());
-        assertEquals("testuser", response.getUsername());
-        assertEquals("test@example.com", response.getEmail());
+        assertNotNull(response.token());
+        assertEquals("testuser", response.username());
+        assertEquals("test@example.com", response.email());
 
         User savedUser = userRepository.findByUsername("testuser").orElse(null);
         assertNotNull(savedUser);
@@ -56,8 +56,8 @@ class AuthServiceTest {
         var response = authService.login(loginRequest);
 
         assertNotNull(response);
-        assertNotNull(response.getToken());
-        assertEquals("testuser", response.getUsername());
+        assertNotNull(response.token());
+        assertEquals("testuser", response.username());
     }
 
     @Test
