@@ -1,0 +1,89 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cloudsync-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudsync}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudsync}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloudsync_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cloudsync-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-cloudsync}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cloudsync-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-cloudsync}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cloudsync}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cloudsync_password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      CLOUDSYNC_STORAGE_PATH: /app/storage
+      # CRITICAL: JWT_SECRET must be set in .env file!
+      # Using :? syntax causes Docker Compose to fail immediately if not set (intended for security)
+      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:?ERROR - JWT_SECRET must be set in .env file}
+    volumes:
+      - backend_storage:/app/storage
+      - backend_data:/app/data
+    ports:
+      - "8080:8080"
+    networks:
+      - cloudsync-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # Health check uses Swagger UI endpoint (must remain enabled)
+      # For production, consider adding Spring Boot Actuator for dedicated /actuator/health endpoint
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/swagger-ui.html || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudsync-frontend
+    environment:
+      # Server-side API URL for Next.js rewrites (uses internal Docker network)
+      API_URL: http://backend:8080
+      # Public API URL for SSR data fetching (also uses internal network)
+      NEXT_PUBLIC_API_URL: http://backend:8080
+    ports:
+      - "3000:3000"
+    networks:
+      - cloudsync-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  cloudsync-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  backend_storage:
+  backend_data:

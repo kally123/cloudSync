@@ -15,38 +15,119 @@ A full-featured cloud storage solution built with Java and Spring Boot. Host you
 
 ## Tech Stack
 
-- **Backend**: Java 17, Spring Boot 3.2
-- **Database**: H2 (development), PostgreSQL (production)
+- **Backend**: Java 21, Spring Boot 3.2
+- **Database**: PostgreSQL (production & Docker), H2 (local development only)
 - **Security**: Spring Security, JWT
-- **Frontend**: HTML5, CSS3, JavaScript, Bootstrap 5
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
 - **API Docs**: SpringDoc OpenAPI
 
 ## Getting Started
 
-### Prerequisites
+You can run CloudSync either with Docker (recommended) or manually.
 
-- Java 17 or higher
-- Maven 3.6+
+### Option 1: Docker (Recommended)
 
-### Installation
+#### Prerequisites
+
+- Docker 20.10+
+- Docker Compose 2.0+
+
+#### Installation
 
 1. **Clone the repository**
    ```bash
+   git clone https://github.com/kally123/cloudSync.git
    cd cloudSync
    ```
 
-2. **Build the project**
+2. **Configure environment variables (REQUIRED)**
    ```bash
-   mvn clean install
+   cp .env.example .env
+   # Edit .env and set JWT_SECRET (required!) and other settings
+   # Generate JWT secret: openssl rand -base64 64
    ```
 
-3. **Run the application**
+3. **Start all services with Docker Compose**
    ```bash
+   docker compose up -d
+   ```
+
+   This will start:
+   - PostgreSQL database on port 5432
+   - Backend API on port 8080
+   - Frontend web app on port 3000
+
+4. **Access the application**
+   - Web UI: http://localhost:3000
+   - API Docs: http://localhost:8080/swagger-ui.html
+   - Backend API: http://localhost:8080
+
+5. **View logs**
+   ```bash
+   # View all logs
+   docker compose logs -f
+   
+   # View specific service logs
+   docker compose logs -f backend
+   docker compose logs -f frontend
+   ```
+
+6. **Stop the application**
+   ```bash
+   docker compose down
+   
+   # Stop and remove volumes (deletes all data)
+   docker compose down -v
+   ```
+
+#### Development Mode with Docker
+
+For development with hot-reloading:
+
+```bash
+# Start development environment
+docker compose -f docker-compose.dev.yml up
+
+# This will:
+# - Mount source code as volumes for hot-reloading
+# - Run backend with mvn spring-boot:run
+# - Run frontend with npm run dev
+# - Automatically reload on code changes
+```
+
+### Option 2: Manual Installation
+
+#### Prerequisites
+
+- Java 21 or higher
+- Maven 3.6+
+- Node.js 18+ and npm
+
+#### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/kally123/cloudSync.git
+   cd cloudSync
+   ```
+
+2. **Build and run the backend**
+   ```bash
+   cd backend
+   mvn clean install
    mvn spring-boot:run
    ```
 
+3. **Build and run the frontend**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
 4. **Access the application**
-   - Web UI: http://localhost:8080
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8080
    - API Docs: http://localhost:8080/swagger-ui.html
    - H2 Console: http://localhost:8080/h2-console
 
@@ -140,6 +221,51 @@ curl -X GET http://localhost:8080/api/files/1/download \
 
 ## Production Deployment
 
+### Docker Deployment (Recommended)
+
+1. **Create a production environment file**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Edit the .env file with production values**
+   ```env
+   JWT_SECRET=your-super-secret-key-change-this-in-production
+   POSTGRES_PASSWORD=your-strong-database-password
+   ```
+
+3. **Start services in production mode**
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Configure reverse proxy (optional)**
+   
+   For production, use Nginx or Traefik as a reverse proxy:
+   
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+       
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+       
+       location /api {
+           proxy_pass http://localhost:8080;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+
+5. **Enable HTTPS** - Use Let's Encrypt or your SSL certificate provider
+
+### Manual Production Deployment
+
 1. **Use PostgreSQL**
    ```yaml
    spring:
@@ -167,22 +293,92 @@ curl -X GET http://localhost:8080/api/files/1/download \
 ## Project Structure
 
 ```
-src/main/java/com/cloudsync/
-├── CloudSyncApplication.java     # Main application
-├── config/                       # Configuration classes
-├── controller/                   # REST controllers
-├── dto/                          # Data transfer objects
-├── entity/                       # JPA entities
-├── exception/                    # Exception handling
-├── repository/                   # Data repositories
-├── security/                     # Security configuration
-└── service/                      # Business logic
+cloudSync/
+├── backend/                          # Spring Boot backend
+│   ├── src/main/java/com/cloudsync/
+│   │   ├── CloudSyncApplication.java
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── entity/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── service/
+│   ├── src/main/resources/
+│   │   └── application.yml
+│   ├── Dockerfile
+│   └── pom.xml
+├── frontend/                         # Next.js frontend
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   └── store/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── next.config.js
+├── docker-compose.yml               # Production Docker setup
+├── docker-compose.dev.yml           # Development Docker setup
+└── .env.example                     # Environment variables template
+```
 
-src/main/resources/
-├── application.yml               # Application config
-└── static/                       # Frontend files
-    ├── index.html
-    └── js/app.js
+## Docker Architecture
+
+The application consists of three Docker containers:
+
+1. **PostgreSQL Database** (postgres:16-alpine)
+   - Stores user data, file metadata, and folders
+   - Persistent volume: `postgres_data`
+   - Port: 5432
+
+2. **Backend API** (Spring Boot)
+   - Java 21 application
+   - Connects to PostgreSQL
+   - Persistent volumes: `backend_storage`, `backend_data`
+   - Port: 8080
+
+3. **Frontend Web App** (Next.js)
+   - React application with SSR
+   - Communicates with backend API
+   - Port: 3000
+
+## Troubleshooting
+
+### Docker Issues
+
+**Port already in use**
+```bash
+# Check what's using the port
+sudo lsof -i :3000  # or :8080, :5432
+
+# Stop the service or change the port in docker-compose.yml
+```
+
+**Container fails to start**
+```bash
+# View detailed logs
+docker compose logs backend
+docker compose logs frontend
+
+# Restart a specific service
+docker compose restart backend
+```
+
+**Cannot connect to database**
+- Ensure PostgreSQL container is healthy: `docker compose ps`
+- Check backend logs: `docker compose logs backend`
+- Verify environment variables in docker-compose.yml
+
+**Frontend cannot reach backend**
+- Check that backend is running: `docker compose ps`
+- Verify NEXT_PUBLIC_API_URL environment variable
+- Check browser console for CORS errors
+
+**Volume permission issues**
+```bash
+# Reset volumes
+docker compose down -v
+docker compose up -d
 ```
 
 ## License
