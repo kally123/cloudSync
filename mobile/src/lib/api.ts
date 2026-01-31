@@ -126,6 +126,75 @@ export const apiClient = {
     return response.data;
   },
 
+  saveToExternalStorage: async (fileId: number, fileName: string): Promise<{ success: boolean; uri?: string; error?: string }> => {
+    try {
+      if (Platform.OS === 'web') {
+        // For web, use File System Access API (similar to frontend)
+        if (!('showSaveFilePicker' in window)) {
+          return { success: false, error: 'File System Access API is not supported in this browser.' };
+        }
+
+        const response = await api.get(`/files/${fileId}/download`, {
+          responseType: 'blob',
+        });
+        const blob = response.data;
+
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{ description: 'All Files', accept: { '*/*': [] } }],
+        });
+
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+
+        return { success: true, uri: fileName };
+      } else {
+        // For React Native (Android/iOS)
+        const FileSystem = await import('expo-file-system');
+        const Sharing = await import('expo-sharing');
+
+        // First download to cache directory
+        const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
+        const downloadResumable = FileSystem.createDownloadResumable(
+          `${API_BASE_URL}/files/${fileId}/download`,
+          fileUri,
+          {
+            headers: {
+              Authorization: `Bearer ${await getToken()}`,
+            },
+          }
+        );
+
+        const result = await downloadResumable.downloadAsync();
+        if (!result) {
+          return { success: false, error: 'Download failed' };
+        }
+
+        // Check if sharing is available
+        const isSharingAvailable = await Sharing.isAvailableAsync();
+        if (isSharingAvailable) {
+          // Use the share dialog which allows saving to Files app, Google Drive, etc.
+          await Sharing.shareAsync(result.uri, {
+            UTI: '*/*',
+            mimeType: '*/*',
+            dialogTitle: 'Save to...',
+          });
+          return { success: true, uri: result.uri };
+        } else {
+          // Fallback: file is saved in cache
+          return { success: true, uri: result.uri };
+        }
+      }
+    } catch (error: any) {
+      console.error('Save to external storage failed:', error);
+      if (error.name === 'AbortError') {
+        return { success: false, error: 'Save cancelled by user' };
+      }
+      return { success: false, error: error.message || 'Failed to save file' };
+    }
+  },
+
   deleteFile: async (fileId: number): Promise<ApiResponse<void>> => {
     console.log('deleteFile API called with fileId:', fileId);
     const response = await api.delete(`/files/${fileId}`);
