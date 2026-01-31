@@ -48,7 +48,7 @@ You can run CloudSync either with Docker (recommended) or manually.
 
 3. **Start all services with Docker Compose**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
    This will start:
@@ -64,20 +64,35 @@ You can run CloudSync either with Docker (recommended) or manually.
 5. **View logs**
    ```bash
    # View all logs
-   docker-compose logs -f
+   docker compose logs -f
    
    # View specific service logs
-   docker-compose logs -f backend
-   docker-compose logs -f frontend
+   docker compose logs -f backend
+   docker compose logs -f frontend
    ```
 
 6. **Stop the application**
    ```bash
-   docker-compose down
+   docker compose down
    
    # Stop and remove volumes (deletes all data)
-   docker-compose down -v
+   docker compose down -v
    ```
+
+#### Development Mode with Docker
+
+For development with hot-reloading:
+
+```bash
+# Start development environment
+docker compose -f docker-compose.dev.yml up
+
+# This will:
+# - Mount source code as volumes for hot-reloading
+# - Run backend with mvn spring-boot:run
+# - Run frontend with npm run dev
+# - Automatically reload on code changes
+```
 
 ### Option 2: Manual Installation
 
@@ -220,7 +235,7 @@ curl -X GET http://localhost:8080/api/files/1/download \
 
 3. **Start services in production mode**
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 4. **Configure reverse proxy (optional)**
@@ -277,22 +292,92 @@ curl -X GET http://localhost:8080/api/files/1/download \
 ## Project Structure
 
 ```
-src/main/java/com/cloudsync/
-├── CloudSyncApplication.java     # Main application
-├── config/                       # Configuration classes
-├── controller/                   # REST controllers
-├── dto/                          # Data transfer objects
-├── entity/                       # JPA entities
-├── exception/                    # Exception handling
-├── repository/                   # Data repositories
-├── security/                     # Security configuration
-└── service/                      # Business logic
+cloudSync/
+├── backend/                          # Spring Boot backend
+│   ├── src/main/java/com/cloudsync/
+│   │   ├── CloudSyncApplication.java
+│   │   ├── config/
+│   │   ├── controller/
+│   │   ├── dto/
+│   │   ├── entity/
+│   │   ├── repository/
+│   │   ├── security/
+│   │   └── service/
+│   ├── src/main/resources/
+│   │   └── application.yml
+│   ├── Dockerfile
+│   └── pom.xml
+├── frontend/                         # Next.js frontend
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── lib/
+│   │   └── store/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── next.config.js
+├── docker-compose.yml               # Production Docker setup
+├── docker-compose.dev.yml           # Development Docker setup
+└── .env.example                     # Environment variables template
+```
 
-src/main/resources/
-├── application.yml               # Application config
-└── static/                       # Frontend files
-    ├── index.html
-    └── js/app.js
+## Docker Architecture
+
+The application consists of three Docker containers:
+
+1. **PostgreSQL Database** (postgres:16-alpine)
+   - Stores user data, file metadata, and folders
+   - Persistent volume: `postgres_data`
+   - Port: 5432
+
+2. **Backend API** (Spring Boot)
+   - Java 21 application
+   - Connects to PostgreSQL
+   - Persistent volumes: `backend_storage`, `backend_data`
+   - Port: 8080
+
+3. **Frontend Web App** (Next.js)
+   - React application with SSR
+   - Communicates with backend API
+   - Port: 3000
+
+## Troubleshooting
+
+### Docker Issues
+
+**Port already in use**
+```bash
+# Check what's using the port
+sudo lsof -i :3000  # or :8080, :5432
+
+# Stop the service or change the port in docker-compose.yml
+```
+
+**Container fails to start**
+```bash
+# View detailed logs
+docker compose logs backend
+docker compose logs frontend
+
+# Restart a specific service
+docker compose restart backend
+```
+
+**Cannot connect to database**
+- Ensure PostgreSQL container is healthy: `docker compose ps`
+- Check backend logs: `docker compose logs backend`
+- Verify environment variables in docker-compose.yml
+
+**Frontend cannot reach backend**
+- Check that backend is running: `docker compose ps`
+- Verify NEXT_PUBLIC_API_URL environment variable
+- Check browser console for CORS errors
+
+**Volume permission issues**
+```bash
+# Reset volumes
+docker compose down -v
+docker compose up -d
 ```
 
 ## License

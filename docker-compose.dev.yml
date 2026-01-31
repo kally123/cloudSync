@@ -1,0 +1,70 @@
+# Development with Docker Compose
+
+This docker-compose.dev.yml file is optimized for local development with hot-reloading.
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: cloudsync-postgres-dev
+    environment:
+      POSTGRES_DB: cloudsync
+      POSTGRES_USER: cloudsync
+      POSTGRES_PASSWORD: cloudsync_dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - cloudsync-dev-network
+
+  # Backend Service (using Maven for hot reload)
+  backend:
+    image: maven:3.9-eclipse-temurin-21
+    container_name: cloudsync-backend-dev
+    working_dir: /app
+    command: mvn spring-boot:run
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloudsync
+      SPRING_DATASOURCE_USERNAME: cloudsync
+      SPRING_DATASOURCE_PASSWORD: cloudsync_dev_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      CLOUDSYNC_STORAGE_PATH: /app/storage
+    volumes:
+      - ./backend:/app
+      - maven_cache:/root/.m2
+      - backend_dev_storage:/app/storage
+    ports:
+      - "8080:8080"
+    networks:
+      - cloudsync-dev-network
+    depends_on:
+      - postgres
+
+  # Frontend Service (using npm dev for hot reload)
+  frontend:
+    image: node:20-alpine
+    container_name: cloudsync-frontend-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    networks:
+      - cloudsync-dev-network
+    depends_on:
+      - backend
+
+networks:
+  cloudsync-dev-network:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  maven_cache:
+  backend_dev_storage:
