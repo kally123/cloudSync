@@ -33,6 +33,3 @@ Thumbs.db
 .env.local
 # Expo
 .expo/
-
-# Docker
-*.dockerignore

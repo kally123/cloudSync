@@ -32,7 +32,9 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       CLOUDSYNC_STORAGE_PATH: /app/storage
-      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:-mySecretKeyForCloudSyncApplicationThatShouldBeChangedInProduction123456}
+      # IMPORTANT: Set JWT_SECRET in .env file for production!
+      # This default is only for testing and should be changed
+      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION_USE_LONG_RANDOM_SECRET_KEY}
     volumes:
       - backend_storage:/app/storage
       - backend_data:/app/data
@@ -57,6 +59,7 @@ services:
       dockerfile: Dockerfile
     container_name: cloudsync-frontend
     environment:
+      # Internal API URL for server-side requests (SSR)
       NEXT_PUBLIC_API_URL: http://backend:8080
     ports:
       - "3000:3000"

@@ -9,6 +9,8 @@ RUN mvn dependency:go-offline -B
 
 # Copy source code and build
 COPY src ./src
+# Skip tests during Docker build to reduce build time and avoid external dependencies
+# Tests should be run in CI/CD pipeline before building the Docker image
 RUN mvn clean package -DskipTests
 
 # Production stage

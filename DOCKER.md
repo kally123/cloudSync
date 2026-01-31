@@ -1,5 +1,17 @@
 # Docker Quick Reference Guide
 
+## ⚠️ Security First!
+
+Before running in production, **YOU MUST**:
+1. Create a `.env` file from `.env.example`
+2. Change the `JWT_SECRET` to a strong random value
+3. Change the `POSTGRES_PASSWORD` to a secure password
+
+Generate a secure JWT secret:
+```bash
+openssl rand -base64 64
+```
+
 ## Quick Start
 
 ### Production (Recommended)
