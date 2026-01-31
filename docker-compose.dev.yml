@@ -1,6 +1,5 @@
-# Development with Docker Compose
-
-This docker-compose.dev.yml file is optimized for local development with hot-reloading.
+# Development Docker Compose
+# This file is optimized for local development with hot-reloading
 
 services:
   # PostgreSQL Database
