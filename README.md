@@ -40,10 +40,11 @@ You can run CloudSync either with Docker (recommended) or manually.
    cd cloudSync
    ```
 
-2. **Configure environment variables (optional)**
+2. **Configure environment variables (REQUIRED)**
    ```bash
    cp .env.example .env
-   # Edit .env to customize settings (JWT secret, database credentials, etc.)
+   # Edit .env and set JWT_SECRET (required!) and other settings
+   # Generate JWT secret: openssl rand -base64 64
    ```
 
 3. **Start all services with Docker Compose**

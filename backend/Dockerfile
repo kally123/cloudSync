@@ -9,9 +9,15 @@ RUN mvn dependency:go-offline -B
 
 # Copy source code and build
 COPY src ./src
-# Skip tests during Docker build to reduce build time and avoid external dependencies
-# Tests should be run in CI/CD pipeline before building the Docker image
-RUN mvn clean package -DskipTests
+
+# Build argument to control test execution
+ARG SKIP_TESTS=true
+
+# Build the application
+# Tests are skipped by default to reduce build time and avoid external dependencies
+# Run tests in CI/CD pipeline before building the Docker image
+# To run tests during build: docker build --build-arg SKIP_TESTS=false
+RUN mvn clean package -DskipTests=${SKIP_TESTS}
 
 # Production stage
 FROM eclipse-temurin:21-jre-alpine

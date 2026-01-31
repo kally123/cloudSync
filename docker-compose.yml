@@ -4,9 +4,9 @@ services:
     image: postgres:16-alpine
     container_name: cloudsync-postgres
     environment:
-      POSTGRES_DB: cloudsync
-      POSTGRES_USER: cloudsync
-      POSTGRES_PASSWORD: cloudsync_password
+      POSTGRES_DB: ${POSTGRES_DB:-cloudsync}
+      POSTGRES_USER: ${POSTGRES_USER:-cloudsync}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloudsync_password}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -26,15 +26,15 @@ services:
       dockerfile: Dockerfile
     container_name: cloudsync-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/cloudsync
-      SPRING_DATASOURCE_USERNAME: cloudsync
-      SPRING_DATASOURCE_PASSWORD: cloudsync_password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-cloudsync}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cloudsync}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cloudsync_password}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       CLOUDSYNC_STORAGE_PATH: /app/storage
-      # IMPORTANT: Set JWT_SECRET in .env file for production!
-      # This default is only for testing and should be changed
-      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION_USE_LONG_RANDOM_SECRET_KEY}
+      # CRITICAL: You MUST set JWT_SECRET in .env file before production use!
+      # This default will cause the app to fail if not changed
+      CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:?ERROR - JWT_SECRET must be set in .env file}
     volumes:
       - backend_storage:/app/storage
       - backend_data:/app/data

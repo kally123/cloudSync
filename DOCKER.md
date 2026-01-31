@@ -4,12 +4,18 @@
 
 Before running in production, **YOU MUST**:
 1. Create a `.env` file from `.env.example`
-2. Change the `JWT_SECRET` to a strong random value
-3. Change the `POSTGRES_PASSWORD` to a secure password
+2. Set `JWT_SECRET` to a strong random value (app will fail to start without it!)
+3. Set `POSTGRES_PASSWORD` to a secure password
 
 Generate a secure JWT secret:
 ```bash
 openssl rand -base64 64
+```
+
+Example `.env` file:
+```env
+JWT_SECRET=your-generated-secret-here
+POSTGRES_PASSWORD=your-secure-database-password
 ```
 
 ## Quick Start
