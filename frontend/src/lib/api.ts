@@ -107,6 +107,45 @@ class ApiClient {
     return response.data
   }
 
+  async saveToLocalStorage(fileId: number, fileName: string) {
+    // Check if File System Access API is supported
+    if (!('showSaveFilePicker' in window)) {
+      throw new Error('File System Access API is not supported in this browser. Please use Chrome, Edge, or Opera.')
+    }
+
+    try {
+      // Download the file as blob first
+      const blob = await this.downloadFile(fileId)
+      
+      // Show save file dialog to let user choose location (including USB drives)
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: 'All Files',
+            accept: { '*/*': [] },
+          },
+        ],
+      })
+
+      // Create a writable stream
+      const writable = await handle.createWritable()
+      
+      // Write the blob to the file
+      await writable.write(blob)
+      
+      // Close the file and commit changes
+      await writable.close()
+      
+      return { success: true, message: 'File saved successfully' }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Save cancelled by user')
+      }
+      throw error
+    }
+  }
+
   async deleteFile(fileId: number) {
     const response = await this.client.delete(`/api/files/${fileId}`)
     return response.data

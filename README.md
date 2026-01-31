@@ -10,6 +10,7 @@ A full-featured cloud storage solution built with Java and Spring Boot. Host you
 - 🔗 **File Sharing** - Generate public share links
 - 📊 **Storage Quotas** - Per-user storage limits
 - 🔍 **File Search** - Search files by name
+- 💾 **External Storage** - Save files to USB drives/pendrives and external storage
 - 📱 **Web Interface** - Modern responsive UI
 - 📖 **API Documentation** - Swagger/OpenAPI documentation
 
@@ -218,6 +219,32 @@ curl -X GET http://localhost:8080/api/files/1/download \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -o downloaded-file.pdf
 ```
+
+## Saving Files to USB Drives/Pendrives
+
+CloudSync supports saving files directly to USB drives, external hard drives, and other storage devices through the web and mobile interfaces.
+
+### Web Interface (Chrome, Edge, Opera)
+
+1. Navigate to your files in the CloudSync web interface
+2. Click on the file menu (three dots) for any file
+3. Select **"Save to Local Storage"**
+4. A system file picker dialog will appear
+5. Navigate to your USB drive or any location on your computer
+6. Choose where to save the file and click "Save"
+
+**Note:** This feature requires modern browsers with File System Access API support (Chrome 86+, Edge 86+, Opera 72+). For other browsers, use the standard "Download" option.
+
+### Mobile App (iOS & Android)
+
+1. Open the CloudSync mobile app
+2. Tap on any file to open the file menu
+3. Select **"Save to External Storage"**
+4. Choose your destination:
+   - **iOS**: Save to Files app, iCloud Drive, or connected external storage
+   - **Android**: Save to Downloads, Google Drive, USB OTG devices, or SD card
+
+The file will be downloaded and saved to your chosen location, accessible even after disconnecting from CloudSync.
 
 ## Production Deployment
 

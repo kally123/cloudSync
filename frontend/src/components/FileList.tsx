@@ -19,6 +19,7 @@ import {
   FiShare2,
   FiEdit2,
   FiLink,
+  FiSave,
 } from 'react-icons/fi'
 
 interface FileListProps {
@@ -78,6 +79,23 @@ export default function FileList({ onRefresh }: FileListProps) {
       document.body.removeChild(a)
     } catch (error) {
       console.error('Download failed:', error)
+    }
+    setActiveMenu(null)
+  }
+
+  const handleSaveToStorage = async (file: FileItem) => {
+    try {
+      await apiClient.saveToLocalStorage(file.id, file.originalName)
+      alert('File saved successfully!')
+    } catch (error: any) {
+      if (error.message.includes('not supported')) {
+        alert('Your browser does not support direct file saving. Please use the regular download option.')
+      } else if (error.message.includes('cancelled')) {
+        // User cancelled - do nothing
+      } else {
+        console.error('Save to storage failed:', error)
+        alert('Failed to save file: ' + (error.message || 'Unknown error'))
+      }
     }
     setActiveMenu(null)
   }
@@ -251,12 +269,18 @@ export default function FileList({ onRefresh }: FileListProps) {
               <FiMoreVertical className="h-5 w-5 text-gray-500" />
             </button>
             {activeMenu?.type === 'file' && activeMenu.id === file.id && (
-              <div className="absolute top-12 right-4 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
+              <div className="absolute top-12 right-4 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[180px]">
                 <button
                   onClick={() => handleDownload(file)}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <FiDownload className="h-4 w-4" /> Download
+                </button>
+                <button
+                  onClick={() => handleSaveToStorage(file)}
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <FiSave className="h-4 w-4" /> Save to Local Storage
                 </button>
                 <button
                   onClick={() => handleShare(file)}

@@ -244,6 +244,24 @@ export default function FilesScreen() {
     }
   };
 
+  const handleSaveToStorage = async (file: FileItem) => {
+    setShowFileMenu(false);
+    try {
+      const result = await apiClient.saveToExternalStorage(file.id, file.originalName);
+      if (result.success) {
+        if (Platform.OS === 'web') {
+          Alert.alert('Success', 'File saved successfully!');
+        } else {
+          Alert.alert('Success', 'File saved successfully! You can now access it from your Files app or chosen location.');
+        }
+      } else {
+        Alert.alert('Error', result.error || 'Failed to save file');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to save file to storage');
+    }
+  };
+
   const openFileMenu = (file: FileItem) => {
     setSelectedFile(file);
     setShowFileMenu(true);
@@ -400,6 +418,14 @@ export default function FilesScreen() {
             >
               <Ionicons name="download-outline" size={22} color="#374151" />
               <Text style={styles.menuItemText}>Download</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => selectedFile && handleSaveToStorage(selectedFile)}
+            >
+              <Ionicons name="save-outline" size={22} color="#374151" />
+              <Text style={styles.menuItemText}>Save to External Storage</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
