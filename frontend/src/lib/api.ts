@@ -1,6 +1,10 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+// In browser, use relative URLs (will be rewritten by Next.js)
+// On server (SSR), use the full URL
+const API_BASE_URL = typeof window === 'undefined' 
+  ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080')
+  : '' // Empty string = relative URLs in browser
 
 class ApiClient {
   private client: AxiosInstance

@@ -16,7 +16,7 @@ A full-featured cloud storage solution built with Java and Spring Boot. Host you
 ## Tech Stack
 
 - **Backend**: Java 21, Spring Boot 3.2
-- **Database**: H2 (development), PostgreSQL (production)
+- **Database**: PostgreSQL (production & Docker), H2 (local development only)
 - **Security**: Spring Security, JWT
 - **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
 - **API Docs**: SpringDoc OpenAPI

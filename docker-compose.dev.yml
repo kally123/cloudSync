@@ -48,7 +48,9 @@ services:
     working_dir: /app
     command: sh -c "npm install && npm run dev"
     environment:
-      # Internal API URL for server-side requests (SSR)
+      # Server-side API URL for Next.js rewrites (uses internal Docker network)
+      API_URL: http://backend:8080
+      # Public API URL for SSR data fetching (also uses internal network)
       NEXT_PUBLIC_API_URL: http://backend:8080
     volumes:
       - ./frontend:/app
