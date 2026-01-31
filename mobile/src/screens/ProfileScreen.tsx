@@ -7,8 +7,8 @@ import {
   Alert,
   ScrollView,
 } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
+import { storage } from '../../App';
 import { useAuthStore } from '../store/authStore';
 import { useFileStore } from '../store/fileStore';
 
@@ -23,8 +23,8 @@ export default function ProfileScreen() {
         text: 'Logout',
         style: 'destructive',
         onPress: async () => {
-          await SecureStore.deleteItemAsync('token');
-          await SecureStore.deleteItemAsync('user');
+          await storage.removeItem('token');
+          await storage.removeItem('user');
           resetFiles();
           logout();
         },

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   RefreshControl,
   Alert,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../lib/api';
@@ -28,6 +32,13 @@ export default function FilesScreen() {
     setLoading,
     setStats,
   } = useFileStore();
+
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
+  const [showFileMenu, setShowFileMenu] = useState(false);
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [newName, setNewName] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -111,6 +122,7 @@ export default function FilesScreen() {
   };
 
   const handleDeleteFile = (file: FileItem) => {
+    console.log('Delete File Triggered:', file);
     Alert.alert('Delete File', `Are you sure you want to delete "${file.originalName}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -118,9 +130,11 @@ export default function FilesScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
+            console.log('Before calling deleteFile API for file ID:', file.id);
             await apiClient.deleteFile(file.id);
-            loadData();
+            console.log('File deleted successfully');
           } catch (error) {
+            console.error('Error occurred while calling deleteFile API:', error);
             Alert.alert('Error', 'Failed to delete file');
           }
         },
@@ -129,6 +143,8 @@ export default function FilesScreen() {
   };
 
   const handleDeleteFolder = (folder: FolderItem) => {
+    console.log('Delete Folder Triggered:', folder);
+    setShowFolderMenu(false);
     Alert.alert('Delete Folder', `Are you sure you want to delete "${folder.name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -136,14 +152,116 @@ export default function FilesScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
+            console.log('Calling deleteFolder API for folder ID:', folder.id);
             await apiClient.deleteFolder(folder.id);
+            console.log('Folder deleted successfully');
             loadData();
           } catch (error) {
+            console.error('Error deleting folder:', error);
             Alert.alert('Error', 'Failed to delete folder');
           }
         },
       },
     ]);
+  };
+
+  const handleShareFile = async (file: FileItem) => {
+    setShowFileMenu(false);
+    try {
+      const response = await apiClient.shareFile(file.id);
+      if (response.success && response.data.shareLink) {
+        const shareUrl = `http://localhost:8080${response.data.shareLink}`;
+        Alert.alert('File Shared', `Share link copied!\n\n${shareUrl}`, [
+          { text: 'OK' },
+          { 
+            text: 'Open', 
+            onPress: () => {
+              if (Platform.OS === 'web') {
+                window.open(shareUrl, '_blank');
+              } else {
+                Linking.openURL(shareUrl);
+              }
+            }
+          },
+        ]);
+        loadData();
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share file');
+    }
+  };
+
+  const handleUnshareFile = async (file: FileItem) => {
+    setShowFileMenu(false);
+    try {
+      await apiClient.unshareFile(file.id);
+      Alert.alert('Success', 'File is no longer shared');
+      loadData();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to unshare file');
+    }
+  };
+
+  const handleRenameFile = async () => {
+    if (!selectedFile || !newName.trim()) return;
+    setShowRenameModal(false);
+    try {
+      await apiClient.renameFile(selectedFile.id, newName.trim());
+      loadData();
+      setNewName('');
+      setSelectedFile(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to rename file');
+    }
+  };
+
+  const handleRenameFolder = async () => {
+    if (!selectedFolder || !newName.trim()) return;
+    setShowRenameModal(false);
+    try {
+      await apiClient.renameFolder(selectedFolder.id, newName.trim());
+      loadData();
+      setNewName('');
+      setSelectedFolder(null);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to rename folder');
+    }
+  };
+
+  const handleDownloadFile = async (file: FileItem) => {
+    setShowFileMenu(false);
+    try {
+      const downloadUrl = `http://localhost:8080/api/files/${file.id}/download`;
+      if (Platform.OS === 'web') {
+        window.open(downloadUrl, '_blank');
+      } else {
+        Linking.openURL(downloadUrl);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to download file');
+    }
+  };
+
+  const openFileMenu = (file: FileItem) => {
+    setSelectedFile(file);
+    setShowFileMenu(true);
+  };
+
+  const openFolderMenu = (folder: FolderItem) => {
+    setSelectedFolder(folder);
+    setShowFolderMenu(true);
+  };
+
+  const openRenameModal = (isFolder: boolean) => {
+    if (isFolder && selectedFolder) {
+      setNewName(selectedFolder.name);
+    } else if (selectedFile) {
+      const nameWithoutExt = selectedFile.originalName.replace(/\.[^/.]+$/, '');
+      setNewName(nameWithoutExt);
+    }
+    setShowFileMenu(false);
+    setShowFolderMenu(false);
+    setShowRenameModal(true);
   };
 
   const formatFileSize = (bytes: number): string => {
@@ -173,7 +291,6 @@ export default function FilesScreen() {
         <TouchableOpacity
           style={styles.itemContainer}
           onPress={() => openFolder(folder)}
-          onLongPress={() => handleDeleteFolder(folder)}
         >
           <View style={[styles.iconContainer, styles.folderIcon]}>
             <Ionicons name="folder" size={24} color="#2563eb" />
@@ -184,7 +301,12 @@ export default function FilesScreen() {
               {folder.fileCount} files, {folder.subfolderCount} folders
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#9ca3af" />
+          <TouchableOpacity 
+            style={styles.menuButton} 
+            onPress={() => openFolderMenu(folder)}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
+          </TouchableOpacity>
         </TouchableOpacity>
       );
     }
@@ -193,7 +315,7 @@ export default function FilesScreen() {
     return (
       <TouchableOpacity
         style={styles.itemContainer}
-        onLongPress={() => handleDeleteFile(file)}
+        onPress={() => openFileMenu(file)}
       >
         <View style={[styles.iconContainer, styles.fileIcon]}>
           <Ionicons name={getFileIcon(file.contentType)} size={24} color="#6b7280" />
@@ -202,7 +324,17 @@ export default function FilesScreen() {
           <Text style={styles.itemName} numberOfLines={1}>{file.originalName}</Text>
           <Text style={styles.itemMeta}>{formatFileSize(file.size)}</Text>
         </View>
-        {file.isPublic && <Ionicons name="link-outline" size={20} color="#10b981" />}
+        {file.isPublic && (
+          <View style={styles.sharedBadge}>
+            <Ionicons name="link" size={14} color="#10b981" />
+          </View>
+        )}
+        <TouchableOpacity 
+          style={styles.menuButton} 
+          onPress={() => openFileMenu(file)}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color="#6b7280" />
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -242,6 +374,166 @@ export default function FilesScreen() {
           contentContainerStyle={styles.list}
         />
       )}
+
+      {/* File Action Menu */}
+      <Modal
+        visible={showFileMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFileMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowFileMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle} numberOfLines={1}>
+              {selectedFile?.originalName}
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => selectedFile && handleDownloadFile(selectedFile)}
+            >
+              <Ionicons name="download-outline" size={22} color="#374151" />
+              <Text style={styles.menuItemText}>Download</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => openRenameModal(false)}
+            >
+              <Ionicons name="pencil-outline" size={22} color="#374151" />
+              <Text style={styles.menuItemText}>Rename</Text>
+            </TouchableOpacity>
+
+            {selectedFile?.isPublic ? (
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => selectedFile && handleUnshareFile(selectedFile)}
+              >
+                <Ionicons name="link-outline" size={22} color="#ef4444" />
+                <Text style={[styles.menuItemText, { color: '#ef4444' }]}>Remove Share Link</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={styles.menuItem} 
+                onPress={() => selectedFile && handleShareFile(selectedFile)}
+              >
+                <Ionicons name="share-outline" size={22} color="#374151" />
+                <Text style={styles.menuItemText}>Share</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => {
+                console.log('Delete button clicked. Selected file:', selectedFile);
+                selectedFile && handleDeleteFile(selectedFile);
+              }}
+            >
+              <Ionicons name="trash-outline" size={22} color="#ef4444" />
+              <Text style={[styles.menuItemText, styles.deleteText]}>Delete</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={() => setShowFileMenu(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Folder Action Menu */}
+      <Modal
+        visible={showFolderMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFolderMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowFolderMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <Text style={styles.menuTitle} numberOfLines={1}>
+              {selectedFolder?.name}
+            </Text>
+
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => openRenameModal(true)}
+            >
+              <Ionicons name="pencil-outline" size={22} color="#374151" />
+              <Text style={styles.menuItemText}>Rename</Text>
+            </TouchableOpacity>
+
+            <View style={styles.menuDivider} />
+
+            <TouchableOpacity 
+              style={styles.menuItem} 
+              onPress={() => selectedFolder && handleDeleteFolder(selectedFolder)}
+            >
+              <Ionicons name="trash-outline" size={22} color="#ef4444" />
+              <Text style={[styles.menuItemText, styles.deleteText]}>Delete</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={() => setShowFolderMenu(false)}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Rename Modal */}
+      <Modal
+        visible={showRenameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRenameModal(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowRenameModal(false)}
+        >
+          <View style={styles.renameContainer}>
+            <Text style={styles.renameTitle}>
+              Rename {selectedFolder ? 'Folder' : 'File'}
+            </Text>
+            <TextInput
+              style={styles.renameInput}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Enter new name"
+              autoFocus
+            />
+            <View style={styles.renameButtons}>
+              <TouchableOpacity 
+                style={styles.renameCancelButton} 
+                onPress={() => setShowRenameModal(false)}
+              >
+                <Text style={styles.renameCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.renameConfirmButton} 
+                onPress={selectedFolder ? handleRenameFolder : handleRenameFile}
+              >
+                <Text style={styles.renameConfirmText}>Rename</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -330,5 +622,118 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
     marginTop: 4,
+  },
+  menuButton: {
+    padding: 8,
+    marginLeft: 4,
+  },
+  sharedBadge: {
+    backgroundColor: '#d1fae5',
+    padding: 4,
+    borderRadius: 6,
+    marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  menuContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 16,
+    paddingBottom: 32,
+    paddingHorizontal: 16,
+  },
+  menuTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#374151',
+    marginLeft: 16,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 8,
+  },
+  deleteText: {
+    color: '#ef4444',
+  },
+  cancelButton: {
+    marginTop: 8,
+    paddingVertical: 14,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  renameContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 24,
+    marginTop: 'auto',
+    marginBottom: 'auto',
+    borderRadius: 16,
+    padding: 24,
+  },
+  renameTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  renameInput: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  renameButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  renameCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  renameCancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  renameConfirmButton: {
+    flex: 1,
+    paddingVertical: 12,
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  renameConfirmText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
   },
 });

@@ -1,6 +1,32 @@
 import axios, { AxiosInstance } from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import { ApiResponse, AuthResponse, FileItem, FolderItem, StorageStats } from '../types';
+
+// Web-compatible storage helper
+const getToken = async (): Promise<string | null> => {
+  if (Platform.OS === 'web') {
+    return localStorage.getItem('token');
+  }
+  const SecureStore = await import('expo-secure-store');
+  return SecureStore.getItemAsync('token');
+};
+
+const clearAuth = async (): Promise<void> => {
+  if (Platform.OS === 'web') {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return;
+  }
+  const SecureStore = await import('expo-secure-store');
+  await SecureStore.deleteItemAsync('token');
+  await SecureStore.deleteItemAsync('user');
+};
+
+// Helper to fetch file as blob for web
+const uriToBlob = async (uri: string): Promise<Blob> => {
+  const response = await fetch(uri);
+  return response.blob();
+};
 
 // Update this to your actual backend URL
 const API_BASE_URL = 'http://localhost:8080/api';
@@ -16,7 +42,7 @@ const api: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    const token = await SecureStore.getItemAsync('token');
+    const token = await getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,8 +56,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('token');
-      await SecureStore.deleteItemAsync('user');
+      await clearAuth();
     }
     return Promise.reject(error);
   }
@@ -39,8 +64,8 @@ api.interceptors.response.use(
 
 export const apiClient = {
   // Auth endpoints
-  login: async (usernameOrEmail: string, password: string): Promise<ApiResponse<AuthResponse>> => {
-    const response = await api.post('/auth/login', { usernameOrEmail, password });
+  login: async (username: string, password: string): Promise<ApiResponse<AuthResponse>> => {
+    const response = await api.post('/auth/login', { username, password });
     return response.data;
   },
 
@@ -67,11 +92,21 @@ export const apiClient = {
     folderId?: number
   ): Promise<ApiResponse<FileItem>> => {
     const formData = new FormData();
-    formData.append('file', {
-      uri: fileUri,
-      name: fileName,
-      type: mimeType,
-    } as any);
+    
+    if (Platform.OS === 'web') {
+      // For web, convert URI to Blob and create a File object
+      const blob = await uriToBlob(fileUri);
+      const file = new File([blob], fileName, { type: mimeType });
+      formData.append('file', file);
+    } else {
+      // For React Native, use the URI format
+      formData.append('file', {
+        uri: fileUri,
+        name: fileName,
+        type: mimeType,
+      } as any);
+    }
+    
     if (folderId) {
       formData.append('folderId', folderId.toString());
     }
@@ -92,19 +127,25 @@ export const apiClient = {
   },
 
   deleteFile: async (fileId: number): Promise<ApiResponse<void>> => {
+    console.log('deleteFile API called with fileId:', fileId);
     const response = await api.delete(`/files/${fileId}`);
     return response.data;
   },
 
   renameFile: async (fileId: number, newName: string): Promise<ApiResponse<FileItem>> => {
-    const response = await api.patch(`/files/${fileId}/rename`, null, {
-      params: { newName },
+    const response = await api.put(`/files/${fileId}/rename`, null, {
+      params: { name: newName },
     });
     return response.data;
   },
 
   shareFile: async (fileId: number): Promise<ApiResponse<FileItem>> => {
     const response = await api.post(`/files/${fileId}/share`);
+    return response.data;
+  },
+
+  unshareFile: async (fileId: number): Promise<ApiResponse<FileItem>> => {
+    const response = await api.delete(`/files/${fileId}/share`);
     return response.data;
   },
 
@@ -130,15 +171,15 @@ export const apiClient = {
   },
 
   renameFolder: async (folderId: number, newName: string): Promise<ApiResponse<FolderItem>> => {
-    const response = await api.patch(`/folders/${folderId}/rename`, null, {
-      params: { newName },
+    const response = await api.put(`/folders/${folderId}/rename`, null, {
+      params: { name: newName },
     });
     return response.data;
   },
 
   // Storage stats
   getStorageStats: async (): Promise<ApiResponse<StorageStats>> => {
-    const response = await api.get('/storage/stats');
+    const response = await api.get('/files/stats');
     return response.data;
   },
 };

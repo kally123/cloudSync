@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { Platform, View, Text, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import * as SecureStore from 'expo-secure-store';
 
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -12,6 +12,35 @@ import FilesScreen from './src/screens/FilesScreen';
 import UploadScreen from './src/screens/UploadScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import { useAuthStore } from './src/store/authStore';
+
+// Web-compatible storage helper
+const storage = {
+  getItem: async (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    const SecureStore = await import('expo-secure-store');
+    return SecureStore.getItemAsync(key);
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    const SecureStore = await import('expo-secure-store');
+    await SecureStore.setItemAsync(key, value);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    const SecureStore = await import('expo-secure-store');
+    await SecureStore.deleteItemAsync(key);
+  },
+};
+
+export { storage };
 
 export type RootStackParamList = {
   Login: undefined;
@@ -71,8 +100,8 @@ export default function App() {
 
   const checkAuth = async () => {
     try {
-      const storedToken = await SecureStore.getItemAsync('token');
-      const storedUser = await SecureStore.getItemAsync('user');
+      const storedToken = await storage.getItem('token');
+      const storedUser = await storage.getItem('user');
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
@@ -85,7 +114,12 @@ export default function App() {
   };
 
   if (isLoading) {
-    return null;
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f3f4f6' }}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={{ marginTop: 16, color: '#6b7280' }}>Loading...</Text>
+      </View>
+    );
   }
 
   return (

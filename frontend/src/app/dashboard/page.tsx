@@ -29,14 +29,24 @@ export default function DashboardPage() {
   const [showUpload, setShowUpload] = useState(false)
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Wait for Zustand to hydrate from localStorage
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   useEffect(() => {
-    if (!token) {
+    if (!isHydrated) return
+    
+    // Check both localStorage and sessionStorage as fallback
+    const storedToken = localStorage.getItem('token') || sessionStorage.getItem('token')
+    if (!token && !storedToken) {
       router.push('/login')
       return
     }
     loadData()
-  }, [token, currentFolderId])
+  }, [isHydrated, token, currentFolderId])
 
   const loadData = async () => {
     setLoading(true)
@@ -88,7 +98,16 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
-  if (!token) return null
+  // Show loading while hydrating
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    )
+  }
+
+  if (!token && !localStorage.getItem('token')) return null
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

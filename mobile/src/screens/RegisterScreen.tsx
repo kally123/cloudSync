@@ -12,9 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList, storage } from '../../App';
 import { apiClient } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -53,8 +52,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       if (response.success && response.data) {
         const { token, username: userName, email: userEmail } = response.data;
         
-        await SecureStore.setItemAsync('token', token);
-        await SecureStore.setItemAsync('user', JSON.stringify({ username: userName, email: userEmail }));
+        await storage.setItem('token', token);
+        await storage.setItem('user', JSON.stringify({ username: userName, email: userEmail }));
         
         setToken(token);
         setUser({ id: 0, username: userName, email: userEmail });

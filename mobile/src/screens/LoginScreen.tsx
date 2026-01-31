@@ -1,4 +1,4 @@
-choco install nodejs-ltsimport React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList } from '../../App';
+import { RootStackParamList, storage } from '../../App';
 import { apiClient } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -22,29 +21,29 @@ type LoginScreenProps = {
 };
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
-  const [usernameOrEmail, setUsernameOrEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { setToken, setUser } = useAuthStore();
 
   const handleLogin = async () => {
-    if (!usernameOrEmail.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await apiClient.login(usernameOrEmail, password);
+      const response = await apiClient.login(username, password);
       if (response.success && response.data) {
-        const { token, username, email } = response.data;
+        const { token, username: userName, email } = response.data;
         
-        await SecureStore.setItemAsync('token', token);
-        await SecureStore.setItemAsync('user', JSON.stringify({ username, email }));
+        await storage.setItem('token', token);
+        await storage.setItem('user', JSON.stringify({ username: userName, email }));
         
         setToken(token);
-        setUser({ id: 0, username, email });
+        setUser({ id: 0, username: userName, email });
       } else {
         Alert.alert('Error', response.message || 'Login failed');
       }
@@ -74,10 +73,10 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <Ionicons name="person-outline" size={20} color="#6b7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Username or Email"
+              placeholder="Username"
               placeholderTextColor="#9ca3af"
-              value={usernameOrEmail}
-              onChangeText={setUsernameOrEmail}
+              value={username}
+              onChangeText={setUsername}
               autoCapitalize="none"
               autoCorrect={false}
             />

@@ -16,7 +16,7 @@ class ApiClient {
     // Request interceptor to add auth token
     this.client.interceptors.request.use((config) => {
       const token = typeof window !== 'undefined' 
-        ? localStorage.getItem('token') 
+        ? (localStorage.getItem('token') || sessionStorage.getItem('token'))
         : null
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
@@ -31,6 +31,7 @@ class ApiClient {
         if (error.response?.status === 401) {
           if (typeof window !== 'undefined') {
             localStorage.removeItem('token')
+            sessionStorage.removeItem('token')
             window.location.href = '/login'
           }
         }

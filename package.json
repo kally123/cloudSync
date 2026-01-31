@@ -1,0 +1,14 @@
+{
+  "name": "cloudsync-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "mobile"
+  ],
+  "scripts": {
+    "frontend": "cd frontend && npm run dev",
+    "mobile": "cd mobile && npm start",
+    "backend": "mvn spring-boot:run"
+  }
+}
