@@ -123,6 +123,7 @@ export default function FilesScreen() {
 
   const handleDeleteFile = (file: FileItem) => {
     console.log('Delete File Triggered:', file);
+    setShowFileMenu(false);
     Alert.alert('Delete File', `Are you sure you want to delete "${file.originalName}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -133,6 +134,7 @@ export default function FilesScreen() {
             console.log('Before calling deleteFile API for file ID:', file.id);
             await apiClient.deleteFile(file.id);
             console.log('File deleted successfully');
+            loadData();
           } catch (error) {
             console.error('Error occurred while calling deleteFile API:', error);
             Alert.alert('Error', 'Failed to delete file');
