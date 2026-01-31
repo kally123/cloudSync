@@ -10,10 +10,11 @@ target/
 .vscode/
 *.swp
 *.swo
-
+.next/
 # Logs
 *.log
 logs/
+node_modules/
 
 # Storage
 storage/
@@ -30,3 +31,5 @@ Thumbs.db
 # Environment
 .env
 .env.local
+# Expo
+.expo/
