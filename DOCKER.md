@@ -133,9 +133,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 
 | Volume | Purpose | Path in Container |
 |--------|---------|-------------------|
-| postgres_data | Database data | /var/lib/postgresql/data |
-| backend_storage | File uploads | /app/storage |
-| backend_data | H2 database files | /app/data |
+| postgres_data | PostgreSQL database data | /var/lib/postgresql/data |
+| backend_storage | User uploaded files | /app/storage |
+| backend_data | Application data directory | /app/data |
 
 ## Health Checks
 

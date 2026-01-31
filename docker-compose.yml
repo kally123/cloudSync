@@ -14,7 +14,7 @@ services:
     networks:
       - cloudsync-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cloudsync"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-cloudsync}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,8 +32,8 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
       CLOUDSYNC_STORAGE_PATH: /app/storage
-      # CRITICAL: You MUST set JWT_SECRET in .env file before production use!
-      # This default will cause the app to fail if not changed
+      # CRITICAL: JWT_SECRET must be set in .env file!
+      # Using :? syntax causes Docker Compose to fail immediately if not set (intended for security)
       CLOUDSYNC_JWT_SECRET: ${JWT_SECRET:?ERROR - JWT_SECRET must be set in .env file}
     volumes:
       - backend_storage:/app/storage
@@ -46,6 +46,8 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
+      # Health check uses Swagger UI endpoint (must remain enabled)
+      # For production, consider adding Spring Boot Actuator for dedicated /actuator/health endpoint
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/swagger-ui.html || exit 1"]
       interval: 30s
       timeout: 10s
